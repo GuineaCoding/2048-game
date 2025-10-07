@@ -5,9 +5,9 @@ class Game2048 {
         this.messageElement = document.getElementById('message');
         this.newGameBtn = document.getElementById('new-game');
         
-        this.cellSize = 100; 
-        this.gapSize = 10;   
-        this.padding = 10;   
+        this.cellSize = 0;
+        this.gapSize = 0;
+        this.padding = 0;
         
         this.init();
     }
@@ -15,8 +15,36 @@ class Game2048 {
     init() {
         this.newGameBtn.addEventListener('click', () => this.newGame());
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+        window.addEventListener('resize', () => this.handleResize());
         
         this.newGame();
+    }
+
+    calculateSizes() {
+        // Get computed styles to calculate responsive sizes
+        const boardRect = this.boardElement.getBoundingClientRect();
+        const grid = this.boardElement.querySelector('.grid');
+        
+        if (grid) {
+            const cell = grid.querySelector('.cell');
+            if (cell) {
+                const cellRect = cell.getBoundingClientRect();
+                this.cellSize = cellRect.width;
+                
+                // Calculate gap size (assuming equal gaps)
+                const computedStyle = window.getComputedStyle(grid);
+                this.gapSize = parseFloat(computedStyle.gap) || 10;
+                this.padding = parseFloat(computedStyle.padding) || 10;
+            }
+        }
+        
+        // Fallback values
+        if (!this.cellSize) {
+            const boardWidth = boardRect.width - 20; // account for padding
+            this.cellSize = (boardWidth - (3 * 10)) / 4; // 3 gaps between 4 cells
+            this.gapSize = 10;
+            this.padding = 10;
+        }
     }
 
     async newGame() {
@@ -69,6 +97,9 @@ class Game2048 {
         
         this.boardElement.appendChild(grid);
         
+        // Calculate sizes based on actual rendered dimensions
+        this.calculateSizes();
+        
         // Create tiles
         for (let row = 0; row < 4; row++) {
             for (let col = 0; col < 4; col++) {
@@ -78,17 +109,35 @@ class Game2048 {
                     tile.className = `tile tile-${value}`;
                     tile.textContent = value;
                     
-                    // Calculate exact position
-                    // Formula: padding + (col * (cellSize + gap))
+                    // Calculate responsive position
                     const left = this.padding + (col * (this.cellSize + this.gapSize));
                     const top = this.padding + (row * (this.cellSize + this.gapSize));
                     
                     tile.style.left = `${left}px`;
                     tile.style.top = `${top}px`;
+                    tile.style.width = `${this.cellSize}px`;
+                    tile.style.height = `${this.cellSize}px`;
                     
                     this.boardElement.appendChild(tile);
                 }
             }
+        }
+    }
+
+    handleResize() {
+        // Recalculate positions when window is resized
+        if (this.boardElement.querySelector('.tile')) {
+            this.calculateSizes();
+            const tiles = this.boardElement.querySelectorAll('.tile');
+            tiles.forEach(tile => {
+                const col = parseInt(tile.style.left) / (this.cellSize + this.gapSize);
+                const row = parseInt(tile.style.top) / (this.cellSize + this.gapSize);
+                
+                tile.style.left = `${this.padding + (col * (this.cellSize + this.gapSize))}px`;
+                tile.style.top = `${this.padding + (row * (this.cellSize + this.gapSize))}px`;
+                tile.style.width = `${this.cellSize}px`;
+                tile.style.height = `${this.cellSize}px`;
+            });
         }
     }
 
@@ -127,44 +176,59 @@ class Game2048 {
     }
 }
 
-// Touch swipe support for mobile
+// Enhanced touch swipe support for mobile
 let touchStartX = 0;
 let touchStartY = 0;
+let touchStartTime = 0;
 
 document.addEventListener('touchstart', (e) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-});
+    touchStartTime = Date.now();
+    e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+}, { passive: false });
 
 document.addEventListener('touchend', (e) => {
     if (!touchStartX || !touchStartY) return;
     
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
+    const touchDuration = Date.now() - touchStartTime;
     
     const diffX = touchStartX - touchEndX;
     const diffY = touchStartY - touchEndY;
     
-    const minSwipeDistance = 30; // Minimum swipe distance
+    const minSwipeDistance = 30;
+    const maxSwipeTime = 1000;
     
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
-        // Horizontal swipe
-        if (diffX > 0) {
-            game.move('left');
+    // Only register swipes that are quick and long enough
+    if (touchDuration < maxSwipeTime && 
+        (Math.abs(diffX) > minSwipeDistance || Math.abs(diffY) > minSwipeDistance)) {
+        
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            // Horizontal swipe
+            if (diffX > minSwipeDistance) {
+                game.move('left');
+            } else if (diffX < -minSwipeDistance) {
+                game.move('right');
+            }
         } else {
-            game.move('right');
-        }
-    } else if (Math.abs(diffY) > minSwipeDistance) {
-        // Vertical swipe
-        if (diffY > 0) {
-            game.move('up');
-        } else {
-            game.move('down');
+            // Vertical swipe
+            if (diffY > minSwipeDistance) {
+                game.move('up');
+            } else if (diffY < -minSwipeDistance) {
+                game.move('down');
+            }
         }
     }
     
     touchStartX = 0;
     touchStartY = 0;
+    touchStartTime = 0;
 });
 
 // Initialize the game when page loads
