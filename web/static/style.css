@@ -372,3 +372,67 @@ body {
 .subtitle {
     color: rgba(236, 240, 241, 0.8) !important;
 }
+
+/* Tile movement animations */
+.tile.moving {
+    z-index: 10;
+    transition: all 0.15s ease-in-out;
+}
+
+.tile.new {
+    animation: appear 0.2s ease-in-out;
+}
+
+.tile.merged {
+    animation: pop 0.3s ease-in-out;
+}
+
+@keyframes appear {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pop {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Slide animations for different directions */
+.tile.slide-up {
+    transition: top 0.15s ease-in-out;
+}
+
+.tile.slide-down {
+    transition: top 0.15s ease-in-out;
+}
+
+.tile.slide-left {
+    transition: left 0.15s ease-in-out;
+}
+
+.tile.slide-right {
+    transition: left 0.15s ease-in-out;
+}
+
+/* Enhanced movement with transform for smoother performance */
+.tile.moving-transform {
+    transition: transform 0.15s ease-in-out;
+    will-change: transform;
+}
